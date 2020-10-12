@@ -78,14 +78,14 @@ app.get('/apiKeyGenerate/:userId', (req, res) => {
       return done(null, user);
     }
   ));
-  
+  /*
   app.get('/httpBasicProtectedResource',
           passport.authenticate('basic', { session: false }),
           (req, res) => {
     res.json({
       yourProtectedResource: "profit"
     });
-  });
+  });*/
   /*
   app.post('/registerBasic',
           (req, res) => {
@@ -181,7 +181,7 @@ app.get('/apiKeyGenerate/:userId', (req, res) => {
       "description": "Example todo",
       "dueDate": "25-02-2020"
   }
-  */
+  *//*
   app.post('/todosJWT', 
     passport.authenticate('jwt', { session: false }),
     (req, res) => {
@@ -195,7 +195,7 @@ app.get('/apiKeyGenerate/:userId', (req, res) => {
         res.sendStatus(400);
       }
       
-  })
+  })*/
   
   app.get('/login',
     passport.authenticate('basic', { session: false }),
@@ -230,7 +230,7 @@ app.get('/', (req, res) => {
 app.get('/postings',
     passport.authenticate('jwt', { session: false }),
     (req, res) => {
-        const t = postings.getAllUserPostings(req.user.id);
+        const t = postings.getAllPostings();
         res.json(t);
 })
 /*
@@ -243,70 +243,153 @@ app.get('/todosJWT',
   })*/
 
 app.get('/postings/:id',
-    passport.authenticate('jwt', { session: false }),    
-    (req, res) => {
-        const result = postings.find(t => t.id == req.params.id);
-        if(result !== undefined)
-        {
-            res.json(result);
-        } else {
-            res.sendStatus(404);
-        }
+  passport.authenticate('jwt', { session: false }),    
+  (req, res) => {
+      const t = postings.getPosting(req.params.id)
+      if(t !== undefined){
+        res.json(t)
+      }
+      else{
+        res.sendStatus(404)
+      }
 })
-
+app.get('/search/category/:category',
+  passport.authenticate('jwt', { session: false }),    
+  (req, res) => {
+      const t = postings.byCategory(req.params.category)
+      if(t !== undefined){
+        res.json(t)
+      }
+      else{
+        res.sendStatus(404)
+      }
+})
+app.get('/search/location/:location',
+  passport.authenticate('jwt', { session: false }),    
+  (req, res) => {
+      const t = postings.byLocation(req.params.location)
+      if(t !== undefined){
+        res.json(t)
+      }
+      else{
+        res.sendStatus(404)
+      }
+})
+app.get('/search/date/:date',
+  passport.authenticate('jwt', { session: false }),    
+  (req, res) => {
+      const t = postings.byDate(req.params.date)
+      if(t !== undefined){
+        res.json(t)
+      }
+      else{
+        res.sendStatus(404)
+      }
+})
+/*
 app.get('/postings/:id/data', (req, res) => {
     
-})
+})*/
 
-app.get('/users/:id', (req, res) => {
-    const result = users.find(t => t.userid == req.params.id);
-    if(result !== undefined)
-    {
-        res.json(result);
-    } else {
-        res.sendStatus(404);
-    }
+app.get('/users/:id',
+  passport.authenticate('jwt', { session: false }),
+  (req, res) => {
+      const t = users.getUserById(req.params.id)
+      if(t !== undefined){
+        res.json(t)
+      }
+      else{
+        res.sendStatus(404)
+      }
 })
 
 app.post('/postings',
-passport.authenticate('jwt', { session: false }),
-(req, res) => {
+  passport.authenticate('jwt', { session: false }),
+  (req, res) => {
+      if('title' in req.body == false ) {
+        return res.status(400).json({
+            status: 'error',
+            error: 'Missing title from body'
+        });
+      }
+      if('description' in req.body == false ) {
+        return res.status(400).json({
+            status: 'error',
+            error: 'Missing description from body'
+        });
+      }
+      if('category' in req.body == false ) {
+        return res.status(400).json({
+            status: 'error',
+            error: 'Missing category from body'
+        });
+      }
+      if('location' in req.body == false ) {
+        return res.status(400).json({
+            status: 'error',
+            error: 'Missing location from body'
+        });
+      }
+      if('images' in req.body == false ) {
+      return res.status(400).json({
+           status: 'error',
+            error: 'Missing images from body'
+        });
+      }
+      if('price' in req.body == false ) {
+        return res.status(400).json({
+              status: 'error',
+              error: 'Missing price from body'
+          });
+      }
+      if('date' in req.body == false ) {
+        return res.status(400).json({
+              status: 'error',
+              error: 'Missing date from body'
+          });
+      }
+      if('delivery' in req.body == false ) {
+        return res.status(400).json({
+              status: 'error',
+              error: 'Missing delivery from body'
+          });
+      }
 
-    postings.createPosting (req.body.title, req.body.description, req.body.category, req.body.location,
-        req.body.images, req.body.price, req.body.date, req.body.delivery, req.user.id)
+      postings.createPosting (req.body.title, req.body.description, req.body.category, req.body.location,
+          req.body.images, req.body.price, req.body.date, req.body.delivery, req.user.id)
 
-    res.sendStatus(200);
+      res.sendStatus(201);
 })
-
+/*
 app.post('/postings/:id/data', (req, res) => {
 
     res.sendStatus(200);
-})
+})*/
 
 app.post('/users', (req, res) => {
 
     if('username' in req.body == false ) {
         return res.status(400).json({
             status: 'error',
-            error: 'Missing address from body'
+            error: 'Missing username from body'
         });
     }
     if('name' in req.body == false ) {
         return res.status(400).json({
             status: 'error',
-            error: 'Missing address from body'
+            error: 'Missing name from body'
         });
     }
     if('email' in req.body == false ) {
         return res.status(400).json({
             status: 'error',
-            error: 'Missing address from body'
+            error: 'Missing email from body'
         });
     }
     if('password' in req.body == false ) {
         return res.status(400).json({
             status: 'error',
-            error: 'Missing address from body'
+            error: 'Missing password from body'
         });
     }
     if('address' in req.body == false ) {
@@ -326,25 +409,16 @@ app.post('/users', (req, res) => {
 app.delete('/postings/:id', 
     passport.authenticate('jwt', { session: false }),
     (req, res) => {
-
-})
-
-app.delete('/users/:id',
-    passport.authenticate('jwt', { session: false }),
-    (req, res) => {
-
+      postings.removePosting(req.body.id)
+      res.sendStatus(200)
 })
 
 app.put('/postings/:id',
     passport.authenticate('jwt', { session: false }),
     (req, res) => {
-
-})
-
-app.put('/users/:id',
-    passport.authenticate('jwt', { session: false }),
-    (req, res) => {
-
+    postings.editPosting (req.body.id, req.body.title, req.body.description, req.body.category, req.body.location,
+        req.body.images, req.body.price, req.body.date, req.body.delivery)
+    res.sendStatus(200);
 })
 
 app.listen(port, () => {

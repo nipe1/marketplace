@@ -2,7 +2,7 @@ const { v4: uuidv4 } = require('uuid');
 
 let users = [
     {
-        id : 1,
+        id : "1",
         username : 'test',
         name : 'Testi Teppo',
         email : 'teppo@mail.com',
@@ -16,7 +16,7 @@ let users = [
         validApiKey: null
     },
     {
-        userid : 2,
+        id : "2",
         username : "teppo1",
         name : "Testi Teppo",
         email : "teppo.testi@mail.com",
@@ -32,7 +32,7 @@ let users = [
 ]
 
 module.exports = {
-  getUserById: (id) => users.find(u => u.id == id),
+  getUserById: (userId) => users.find(u => u.id == userId),
   getUserByName: (username) => users.find(u => u.username == username),
   resetApiKey: (userId) => {
     const user = users.find(u => u.id == userId);
