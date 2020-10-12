@@ -1,72 +1,257 @@
 const express = require('express')
 const bodyParser = require('body-parser');
-const { v4: uuidv4 } = require('uuid');
+const bcrypt = require('bcryptjs');
+const postings = require('./services/postings');
+const users = require('./services/users');
 const app = express()
 const port = 3000
 
 app.use(bodyParser.json());
 
-let users = [
+/*********************************************
+ * API KEY DEMO
+ ********************************************/
+app.get('/apiKeyGenerate/:userId', (req, res) => {
+    const userId = req.params.userId;
+    let apiKey = users.getApiKey(userId);
+    if(apiKey === false) // user not found
     {
-        id : uuidv4(),
-        username : 'test',
-        name : 'Testi Teppo',
-        email : 'teppo@mail.com',
-        password : '12345',
-        address : {
-            street : 'Testitie 1',
-            country : 'Finland',
-            postalCode : '11111',
-            city : 'Helsinki'
-        }
-    },
-    {
-        userid : uuidv4(),
-        username : "teppo1",
-        name : "Testi Teppo",
-        email : "teppo.testi@mail.com",
-        password : "string",
-        address : {
-            street : "kaduntie 1",
-            country : "Finland",
-            postalCode : "012234",
-            city : "Kaupunkila"
-        }
+      res.sendStatus(400);
     }
-]
+    if(apiKey === null)
+    {
+      apiKey = users.resetApiKey(userId)
+    }
+    res.json({
+      apiKey
+    })
+  });
+  
+  function checkForApiKey(req, res, next)
+  {
+    const receivedKey = req.get('X-Api-Key');
+    if(receivedKey === undefined) {
+      return res.status(400).json({ reason: "X-Api-Key header missing"});
+    }
+  
+    const user = users.getUserWithApiKey(receivedKey);
+    if(user === undefined) {
+      return res.status(400).json({ reason: "Incorrect api key"});
+    }
+  
+    req.user = user;
+  
+    // pass the control to the next handler in line
+    next();
+  }
+  
+  app.get('/apiKeyProtectedResource', checkForApiKey, (req, res) => {
+    res.json({
+      yourResource: "foo"
+    })
+  });
+  
+  /*********************************************
+   * HTTP Basic Authentication
+   * Passport module used
+   * http://www.passportjs.org/packages/passport-http/
+   ********************************************/
+  const passport = require('passport');
+  const BasicStrategy = require('passport-http').BasicStrategy;
+  
+  passport.use(new BasicStrategy(
+    function(username, password, done) {
+  
+      const user = users.getUserByName(username);
+      if(user == undefined) {
+        // Username not found
+        console.log("HTTP Basic username not found");
+        return done(null, false, { message: "HTTP Basic username not found" });
+      }
+  
+      /* Verify password match */
+      if(bcrypt.compareSync(password, user.password) == false) {
+        // Password does not match
+        console.log("HTTP Basic password not matching username");
+        return done(null, false, { message: "HTTP Basic password not found" });
+      }
+      return done(null, user);
+    }
+  ));
+  
+  app.get('/httpBasicProtectedResource',
+          passport.authenticate('basic', { session: false }),
+          (req, res) => {
+    res.json({
+      yourProtectedResource: "profit"
+    });
+  });
+  /*
+  app.post('/registerBasic',
+          (req, res) => {
+  
+    if('username' in req.body == false ) {
+      res.status(400);
+      res.json({status: "Missing username from body"})
+      return;
+    }
+    if('password' in req.body == false ) {
+      res.status(400);
+      res.json({status: "Missing password from body"})
+      return;
+    }
+    if('email' in req.body == false ) {
+      res.status(400);
+      res.json({status: "Missing email from body"})
+      return;
+    }
+  
+    const hashedPassword = bcrypt.hashSync(req.body.password, 6);
+    console.log(hashedPassword);
+    users.addUser(req.body.username, req.body.email, hashedPassword);
+  
+    res.status(201).json({ status: "created" });
+  });*/
+  
+  
+  /*********************************************
+   * JWT authentication
+   * Passport module is used, see documentation
+   * http://www.passportjs.org/packages/passport-jwt/
+   ********************************************/
+  const jwt = require('jsonwebtoken');
+  const JwtStrategy = require('passport-jwt').Strategy,
+        ExtractJwt = require('passport-jwt').ExtractJwt;
+  const jwtSecretKey = require('./jwt-key.json');
+  
+  
+  let options = {}
+  
+  /* Configure the passport-jwt module to expect JWT
+     in headers from Authorization field as Bearer token */
+  options.jwtFromRequest = ExtractJwt.fromAuthHeaderAsBearerToken();
+  
+  /* This is the secret signing key.
+     You should NEVER store it in code  */
+  options.secretOrKey = jwtSecretKey.secret;
+  
+  passport.use(new JwtStrategy(options, function(jwt_payload, done) {
+    console.log("Processing JWT payload for token content:");
+    console.log(jwt_payload);
+  
+  
+    /* Here you could do some processing based on the JWT payload.
+    For example check if the key is still valid based on expires property.
+    */
+    const now = Date.now() / 1000;
+    if(jwt_payload.exp > now) {
+      done(null, jwt_payload.user);
+    }
+    else {// expired
+      done(null, false);
+    }
+  }));
+  
+  
+  app.get(
+    '/jwtProtectedResource',
+    passport.authenticate('jwt', { session: false }),
+    (req, res) => {
+      console.log("jwt");
+      res.json(
+        {
+          status: "Successfully accessed protected resource with JWT",
+          user: req.user
+        }
+      );
+    }
+  );
+  /*
+  app.get('/todosJWT', 
+    passport.authenticate('jwt', { session: false }),
+    (req, res) => {
+      console.log('GET /todosJWT')    
+      const t = postings.getAllUserPostings(req.user.id);
+      res.json(t);
+  })*/
+  
+  /*
+  Body JSON structure example
+  {
+      "description": "Example todo",
+      "dueDate": "25-02-2020"
+  }
+  */
+  app.post('/todosJWT', 
+    passport.authenticate('jwt', { session: false }),
+    (req, res) => {
+      console.log('POST /todosJWT');
+      console.log(req.body);
+      if(('description' in req.body) && ( 'dueDate' in req.body)) {
+        todos.insertTodo(req.body.description, req.body.dueDate, req.user.id);
+        res.json(todos.getAllUserTodos(req.user.id));
+      }
+      else {
+        res.sendStatus(400);
+      }
+      
+  })
+  
+  app.get('/login',
+    passport.authenticate('basic', { session: false }),
+    (req, res) => {
+      const body = {
+        id: req.user.id,
+        email : req.user.email
+      };
+  
+      const payload = {
+        user : body
+      };
+  
+      const options = {
+        expiresIn: '1d'
+      }
+  
+      /* Sign the token with payload, key and options.
+         Detailed documentation of the signing here:
+         https://github.com/auth0/node-jsonwebtoken#readme */
+      const token = jwt.sign(payload, jwtSecretKey.secret, options);
+  
+      return res.json({ token });
+  })
 
-let postings = [
-    {
-        id : uuidv4(),
-        title : "Bicycle",
-        description : "A mountain bike, no issues.",
-        category : "bicycles",
-        location : "Helsinki",
-        images : "string",
-        price : 275,
-        date : "14.9.2020",
-        delivery : "pickup",
-        seller : users[0]
-    }
-]
 
 app.get('/', (req, res) => {
   res.send('Hello World!')
 })
 
 
-app.get('/postings', (req, res) => {
-    res.json({ postings });
+app.get('/postings',
+    passport.authenticate('jwt', { session: false }),
+    (req, res) => {
+        const t = postings.getAllUserPostings(req.user.id);
+        res.json(t);
 })
+/*
+app.get('/todosJWT', 
+    passport.authenticate('jwt', { session: false }),
+    (req, res) => {
+      console.log('GET /todosJWT')    
+      const t = postings.getAllUserPostings(req.user.id);
+      res.json(t);
+  })*/
 
-app.get('/postings/:id', (req, res) => {
-    const result = postings.find(t => t.id == req.params.id);
-    if(result !== undefined)
-    {
-        res.json(result);
-    } else {
-        res.sendStatus(404);
-    }
+app.get('/postings/:id',
+    passport.authenticate('jwt', { session: false }),    
+    (req, res) => {
+        const result = postings.find(t => t.id == req.params.id);
+        if(result !== undefined)
+        {
+            res.json(result);
+        } else {
+            res.sendStatus(404);
+        }
 })
 
 app.get('/postings/:id/data', (req, res) => {
@@ -83,25 +268,12 @@ app.get('/users/:id', (req, res) => {
     }
 })
 
-app.post('/login', (req, res) => {
+app.post('/postings',
+passport.authenticate('jwt', { session: false }),
+(req, res) => {
 
-})
-
-app.post('/postings', (req, res) => {
-
-    const newPosting = {
-        id : uuidv4(),
-        title : req.body.title,
-        description : req.body.description,
-        category : req.body.category,
-        location : req.body.location,
-        images : req.body.images,
-        price : req.body.price,
-        date : req.body.date,
-        delivery : req.body.delivery,
-        seller : req.body.seller
-    }
-    postings.push(newPosting);
+    postings.createPosting (req.body.title, req.body.description, req.body.category, req.body.location,
+        req.body.images, req.body.price, req.body.date, req.body.delivery, req.user.id)
 
     res.sendStatus(200);
 })
@@ -113,32 +285,65 @@ app.post('/postings/:id/data', (req, res) => {
 
 app.post('/users', (req, res) => {
 
-    const newUser = {
-        userid : uuidv4(),
-        username : req.body.username,
-        name : req.body.name,
-        email : req.body.email,
-        password : req.body.password,
-        address : req.body.address
+    if('username' in req.body == false ) {
+        return res.status(400).json({
+            status: 'error',
+            error: 'Missing address from body'
+        });
     }
-    sensors.push(newUser);
+    if('name' in req.body == false ) {
+        return res.status(400).json({
+            status: 'error',
+            error: 'Missing address from body'
+        });
+    }
+    if('email' in req.body == false ) {
+        return res.status(400).json({
+            status: 'error',
+            error: 'Missing address from body'
+        });
+    }
+    if('password' in req.body == false ) {
+        return res.status(400).json({
+            status: 'error',
+            error: 'Missing address from body'
+        });
+    }
+    if('address' in req.body == false ) {
+        return res.status(400).json({
+            status: 'error',
+            error: 'Missing address from body'
+        });
+    }
 
-    res.sendStatus(200);
+    const hashedPassword = bcrypt.hashSync(req.body.password, 6);
+
+    console.log(hashedPassword);
+    users.addUser(req.body.username, req.body.name, req.body.email, hashedPassword, req.body.address)
+    res.sendStatus(201)
 })
 
-app.delete('/sensors/:id', (req, res) => {
+app.delete('/postings/:id', 
+    passport.authenticate('jwt', { session: false }),
+    (req, res) => {
 
 })
 
-app.delete('/users/:id', (req, res) => {
+app.delete('/users/:id',
+    passport.authenticate('jwt', { session: false }),
+    (req, res) => {
 
 })
 
-app.put('/sensors/:id', (req, res) => {
+app.put('/postings/:id',
+    passport.authenticate('jwt', { session: false }),
+    (req, res) => {
 
 })
 
-app.put('/users/:id', (req, res) => {
+app.put('/users/:id',
+    passport.authenticate('jwt', { session: false }),
+    (req, res) => {
 
 })
 
