@@ -78,41 +78,6 @@ app.get('/apiKeyGenerate/:userId', (req, res) => {
       return done(null, user);
     }
   ));
-  /*
-  app.get('/httpBasicProtectedResource',
-          passport.authenticate('basic', { session: false }),
-          (req, res) => {
-    res.json({
-      yourProtectedResource: "profit"
-    });
-  });*/
-  /*
-  app.post('/registerBasic',
-          (req, res) => {
-  
-    if('username' in req.body == false ) {
-      res.status(400);
-      res.json({status: "Missing username from body"})
-      return;
-    }
-    if('password' in req.body == false ) {
-      res.status(400);
-      res.json({status: "Missing password from body"})
-      return;
-    }
-    if('email' in req.body == false ) {
-      res.status(400);
-      res.json({status: "Missing email from body"})
-      return;
-    }
-  
-    const hashedPassword = bcrypt.hashSync(req.body.password, 6);
-    console.log(hashedPassword);
-    users.addUser(req.body.username, req.body.email, hashedPassword);
-  
-    res.status(201).json({ status: "created" });
-  });*/
-  
   
   /*********************************************
    * JWT authentication
@@ -166,37 +131,8 @@ app.get('/apiKeyGenerate/:userId', (req, res) => {
       );
     }
   );
-  /*
-  app.get('/todosJWT', 
-    passport.authenticate('jwt', { session: false }),
-    (req, res) => {
-      console.log('GET /todosJWT')    
-      const t = postings.getAllUserPostings(req.user.id);
-      res.json(t);
-  })*/
   
-  /*
-  Body JSON structure example
-  {
-      "description": "Example todo",
-      "dueDate": "25-02-2020"
-  }
-  *//*
-  app.post('/todosJWT', 
-    passport.authenticate('jwt', { session: false }),
-    (req, res) => {
-      console.log('POST /todosJWT');
-      console.log(req.body);
-      if(('description' in req.body) && ( 'dueDate' in req.body)) {
-        todos.insertTodo(req.body.description, req.body.dueDate, req.user.id);
-        res.json(todos.getAllUserTodos(req.user.id));
-      }
-      else {
-        res.sendStatus(400);
-      }
-      
-  })*/
-  
+  // Log in using basic authentication
   app.get('/login',
     passport.authenticate('basic', { session: false }),
     (req, res) => {
@@ -223,7 +159,7 @@ app.get('/apiKeyGenerate/:userId', (req, res) => {
 
 
 app.get('/', (req, res) => {
-  res.send('Hello World!')
+  res.send('https://github.com/nipe1/marketplace')
 })
 
 
@@ -233,14 +169,6 @@ app.get('/postings',
         const t = postings.getAllPostings();
         res.json(t);
 })
-/*
-app.get('/todosJWT', 
-    passport.authenticate('jwt', { session: false }),
-    (req, res) => {
-      console.log('GET /todosJWT')    
-      const t = postings.getAllUserPostings(req.user.id);
-      res.json(t);
-  })*/
 
 app.get('/postings/:id',
   passport.authenticate('jwt', { session: false }),    
@@ -286,10 +214,6 @@ app.get('/search/date/:date',
         res.sendStatus(404)
       }
 })
-/*
-app.get('/postings/:id/data', (req, res) => {
-    
-})*/
 
 app.get('/users/:id',
   passport.authenticate('jwt', { session: false }),
@@ -360,11 +284,6 @@ app.post('/postings',
 
       res.sendStatus(201);
 })
-/*
-app.post('/postings/:id/data', (req, res) => {
-
-    res.sendStatus(200);
-})*/
 
 app.post('/users', (req, res) => {
 
@@ -422,5 +341,5 @@ app.put('/postings/:id',
 })
 
 app.listen(port, () => {
-  console.log(`Example app listening at http://localhost:${port}`)
+  console.log(`App is listening at http://localhost:${port}`)
 })
