@@ -3,9 +3,9 @@ const { v4: uuidv4 } = require('uuid');
 let users = [
     {
         id : "1",
-        username : 'test',
-        name : 'Testi Teppo',
-        email : 'teppo@mail.com',
+        username : 'johndoe',
+        name : 'John Doe',
+        email : 'doe@mail.com',
         password: '$2y$06$eQav1OaIyWSUnlvPSaFXRe5gWRqXd.s9vac1SV1GafxAr8hdmsgCy', //johndoepassword
         address : {
             street : 'Testitie 1',
@@ -17,9 +17,9 @@ let users = [
     },
     {
         id : "2",
-        username : "teppo1",
-        name : "Testi Teppo",
-        email : "teppo.testi@mail.com",
+        username : "tester",
+        name : "Tester Teppo",
+        email : "teppo.tester@mail.com",
         password: '$2y$06$PhZ74dT8/5g6B8SgssFq6ey4ojLxmP6pos2DcevMUGw25Vc9jGEou', //testerpassword
         address : {
             street : "kaduntie 1",
